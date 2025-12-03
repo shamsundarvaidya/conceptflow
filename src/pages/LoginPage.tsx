@@ -1,3 +1,4 @@
+// src/pages/LoginPage.tsx
 import { useState } from "react";
 import {
   Box,
@@ -10,16 +11,39 @@ import {
   PasswordInput,
   Button,
   Anchor,
+  Alert,
+  Overlay,
+  Loader,
 } from "@mantine/core";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+import { useAuthStore } from "../stores/authStore"; // adjust path if needed
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  function handleSubmit(e: React.FormEvent) {
+  const login = useAuthStore((state) => state.login);
+  const loading = useAuthStore((state) => state.loading);
+  const error = useAuthStore((state) => state.error);
+
+  const navigate = useNavigate();
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    console.log("LOGIN:", { email, password });
+
+    try {
+      console.log("Attempting login with", { email, password });
+      await login({ email, password });
+
+      // if login succeeded, your store should have set user
+      const { user } = useAuthStore.getState();
+      if (user) {
+        navigate("/"); // or /canvas etc.
+      }
+    } catch (err) {
+      // optional: your login action should already set `error` in state
+      console.error("Login failed", err);
+    }
   }
 
   return (
@@ -97,16 +121,50 @@ export default function LoginPage() {
             background:
               "linear-gradient(135deg, rgba(15,23,42,0.9), rgba(15,23,42,0.96))",
             backdropFilter: "blur(18px)",
+            position: "relative",
+            overflow: "hidden",
           }}
         >
+          {/* Loading overlay on top of the card */}
+          {loading && (
+            <Overlay
+              blur={4}
+              opacity={0.25}
+              color="#020617"
+              zIndex={20}
+            >
+              <Box
+                style={{
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Loader />
+              </Box>
+            </Overlay>
+          )}
+
           <Stack gap="sm">
             <Title order={2} c="gray.0">
               Welcome back
             </Title>
-            <Text c="dimmed" fz="sm">
+            <Text c="white" fz="sm">
               Log in to continue mapping your ideas in ConceptFlow.
             </Text>
           </Stack>
+
+          {error && (
+            <Alert
+              mt="md"
+              color="red"
+              variant="light"
+              title="Login failed"
+            >
+              {error}
+            </Alert>
+          )}
 
           <form onSubmit={handleSubmit}>
             <Stack mt="md" gap="sm">
@@ -117,6 +175,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.currentTarget.value)}
+                disabled={loading}
               />
 
               <PasswordInput
@@ -125,9 +184,15 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.currentTarget.value)}
+                disabled={loading}
               />
 
-              <Button type="submit" fullWidth mt="sm">
+              <Button
+                type="submit"
+                fullWidth
+                mt="sm"
+                loading={loading}
+              >
                 Login
               </Button>
 

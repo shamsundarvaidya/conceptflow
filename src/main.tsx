@@ -16,6 +16,8 @@ import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 
+
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -37,6 +39,12 @@ const router = createBrowserRouter([
   },
 ]);
 
+if (import.meta.env.DEV) {
+  const { worker } = await import("./mocks/browser");
+  await worker.start({
+    onUnhandledRequest: "bypass", // Avoid warnings
+  });
+}
 
 
 createRoot(document.getElementById('root')!).render(
