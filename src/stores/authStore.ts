@@ -36,12 +36,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ loading: true, error: null });
 
     try {
-      const res = await fetch(`${API_BASE_URL}/login`, {
+      const res = await fetch(`${API_BASE_URL}/api/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
+        credentials: "include", // Important for cookie-based auth
       });
 
       // Handle non-2xx status

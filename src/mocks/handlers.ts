@@ -5,18 +5,11 @@ interface LoginRequest {
   password: string;
 }
 
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  token: string;
-}
 
 interface LoginSuccessResponse {
   id: number;
   name: string;
   email: string;
-  token: string;
 }
 
 interface LoginErrorResponse {
@@ -50,16 +43,20 @@ export const handlers = [
         );
       }
 
+      const token = "mock-token-123";
       // ✅ SUCCESS CASE
       return HttpResponse.json(
         {
           id: 1,
           name: "Mock User",
-          email,
-          token: "mock-token-123",
+          email
         },
         {
           status: 200,
+          headers: {
+            // HttpOnly cookie simulation
+            "Set-Cookie": `token=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600`,
+          },
         }
       );
     }
