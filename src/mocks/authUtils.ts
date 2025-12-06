@@ -2,9 +2,9 @@
 import { HttpResponse } from "msw";
 
 export function isAuthenticated(cookies: Record<string, string>): boolean {
-  // You can also check the value here if you want
-  // return cookies.token === "mock-jwt-token-123";
-  return Boolean(cookies.token);
+
+  return cookies.token === "mock-jwt-token-123";
+
 }
 
 export function requireAuth(cookies: Record<string, string>) {

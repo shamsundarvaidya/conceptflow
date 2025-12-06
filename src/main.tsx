@@ -18,6 +18,9 @@ import RegisterPage from "./pages/RegisterPage";
 
 
 
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import ProjectsPage from "./pages/projectsPage";
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -35,6 +38,18 @@ const router = createBrowserRouter([
         path: "register",
         Component: RegisterPage,
       },
+      // Protected Routes
+      {
+        path: "app",
+        Component: ProtectedRoute,
+        children: [
+          {
+            path: "projects",
+            Component: ProjectsPage,
+          },
+          // Future routes like /app/editor/:id can go here
+        ]
+      }
     ],
   },
 ]);

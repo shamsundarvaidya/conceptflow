@@ -8,4 +8,6 @@ export interface Project {
   updatedAt: string;  // ISO date
   thumbnailUrl?: string; // optional later for preview
   isPinned?: boolean;
+  lastOpenedAt?: string;
 }
+

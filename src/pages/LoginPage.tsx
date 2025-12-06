@@ -36,9 +36,11 @@ export default function LoginPage() {
       await login({ email, password });
 
       // if login succeeded, your store should have set user
-      const { user } = useAuthStore.getState();
-      if (user) {
-        navigate("/"); // or /canvas etc.
+      const { isAuthenticated } = useAuthStore.getState();
+
+      if (isAuthenticated) {
+        console.log("User is authenticated");
+        navigate("/app/projects"); // or /canvas etc.
       }
     } catch (err) {
       // optional: your login action should already set `error` in state

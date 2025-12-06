@@ -1,12 +1,17 @@
 // src/mocks/projectsDb.ts
-export interface Project {
-  id: number;
-  name: string;
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
-  lastOpenedAt?: string;
-}
+/**
+ * Projects Database Simulation
+ * 
+ * This file acts as a simple in-memory database for projects. It provides helper functions to:
+ * - listProjects: Retrieve all projects sorted by update time.
+ * - listRecentProjects: Retrieve recently opened projects.
+ * - findProject: Get a specific project by ID.
+ * - createProject: Create a new project with a unique ID and timestamps.
+ * - updateProject: Update an existing project's details.
+ * - deleteProject: Remove a project from the simulated database.
+ * - touchProjectLastOpened: Update the 'lastOpenedAt' timestamp for a project.
+ */
+import type { Project } from "./types";
 
 let nextProjectId = 3;
 
@@ -21,7 +26,7 @@ let projects: Project[] = [
   },
   {
     id: 2,
-    name: "Brainstorm – New Features",
+    name: "Brainstorm - New Features",
     description: "Rough ideas for next release",
     createdAt: new Date("2025-12-02T08:00:00Z").toISOString(),
     updatedAt: new Date("2025-12-02T09:15:00Z").toISOString(),

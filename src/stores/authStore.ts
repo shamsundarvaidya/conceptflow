@@ -1,11 +1,7 @@
 import { create } from "zustand";
+import type { User } from "../types/User";
+import { user_login } from "../utils/authFunctions";
 
-export type User = {
-  id: string;
-  name: string;
-  email: string;
-  token: string;
-};
 
 type LoginPayload = {
   email: string;
@@ -22,9 +18,7 @@ type AuthState = {
   logout: () => void;
 };
 
-// Optional: central API base URL for your mock server
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ?? "http://localhost:5173";
+
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
@@ -36,40 +30,17 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ loading: true, error: null });
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-        credentials: "include", // Important for cookie-based auth
-      });
-
-      // Handle non-2xx status
-      if (!res.ok) {
-        let message = "Login failed";
-        try {
-          const data = await res.json();
-          if (data?.message && typeof data.message === "string") {
-            message = data.message;
-          }
-          
-        } catch {
-          // ignore JSON parsing error
-        }
-        throw new Error(message);
+      const res = await user_login(email, password);
+      if (res.success) {
+        set({
+          user: res.user,
+          isAuthenticated: true,
+          loading: false,
+          error: null,
+        });
+      } else {
+        throw new Error(res.error);
       }
-
-      // Expect your mock server to return a User-like object
-      console.log("Login response status:", res.status);
-      const data = (await res.json()) as User;
-
-      set({
-        user: data,
-        isAuthenticated: true,
-        loading: false,
-        error: null,
-      });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Login failed";

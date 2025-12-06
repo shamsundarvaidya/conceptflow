@@ -1,22 +1,17 @@
 // src/mocks/authHandlers.ts
+/**
+ * Authentication Handlers
+ * 
+ * This file contains MSW handlers for authentication-related endpoints:
+ * - POST /api/login: Authenticates a user with email and password, setting a simulated HttpOnly cookie.
+ * - POST /api/logout: Logs out the user by expiring the authentication cookie.
+ */
 import { http, HttpResponse } from "msw";
 
-interface LoginRequest {
-  email: string;
-  password: string;
-}
+import type { LoginRequest, LoginSuccessResponse, LoginErrorResponse } from "./types";
 
-interface LoginSuccessResponse {
-  id: number;
-  name: string;
-  email: string;
-}
+import { MOCK_TOKEN } from "./types";
 
-interface LoginErrorResponse {
-  message: string;
-}
-
-const MOCK_TOKEN = "mock-jwt-token-123";
 
 export const authHandlers = [
   http.post<never, LoginRequest, LoginSuccessResponse | LoginErrorResponse>(
@@ -25,7 +20,7 @@ export const authHandlers = [
       const { email, password } = await request.json();
 
       const isValidUser =
-        email === "user@example.com" && password === "password123";
+        email === "test@mail.com" && password === "test123";
 
       if (!isValidUser) {
         return HttpResponse.json(
