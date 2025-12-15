@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router";
 import {
     Container,
     Title,
@@ -10,11 +11,12 @@ import {
     Loader,
     Alert
 } from "@mantine/core";
-import { IconFolderOpen, IconAlertCircle } from "@tabler/icons-react";
+import { IconFolderOpen, IconAlertCircle, IconPlus } from "@tabler/icons-react";
 import { ProjectCard } from "../components/ProjectCard";
 import type { Project } from "../types/project";
 
 export default function ProjectsPage() {
+    const navigate = useNavigate();
     const [recentProjects, setRecentProjects] = useState<Project[]>([]);
     const [allProjects, setAllProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
@@ -91,7 +93,12 @@ export default function ProjectsPage() {
                     >
                         Open Local Project
                     </Button>
-                    <Button>New Project</Button>
+                    <Button
+                        leftSection={<IconPlus size={18} />}
+                        onClick={() => navigate("/app/createproject")}
+                    >
+                        New Project
+                    </Button>
                 </Group>
             </Group>
 
