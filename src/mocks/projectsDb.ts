@@ -20,6 +20,10 @@ let projects: Project[] = [
     id: 1,
     name: "ConceptFlow Demo",
     description: "Example mind-map project",
+    projectType: "mindmap",
+    storageType: "cloud",
+    visibility: "private",
+    color: "#228be6",
     createdAt: new Date("2025-12-01T09:00:00Z").toISOString(),
     updatedAt: new Date("2025-12-01T10:00:00Z").toISOString(),
     lastOpenedAt: new Date("2025-12-02T07:30:00Z").toISOString(),
@@ -28,6 +32,10 @@ let projects: Project[] = [
     id: 2,
     name: "Brainstorm - New Features",
     description: "Rough ideas for next release",
+    projectType: "canvas",
+    storageType: "cloud",
+    visibility: "private",
+    color: "#40c057",
     createdAt: new Date("2025-12-02T08:00:00Z").toISOString(),
     updatedAt: new Date("2025-12-02T09:15:00Z").toISOString(),
     lastOpenedAt: new Date("2025-12-03T05:45:00Z").toISOString(),
@@ -61,6 +69,10 @@ export function touchProjectLastOpened(id: number): Project | undefined {
 export function createProject(data: {
   name: string;
   description?: string;
+  projectType: Project["projectType"];
+  storageType: Project["storageType"];
+  visibility: Project["visibility"];
+  color?: string;
 }): Project {
   const now = new Date().toISOString();
 
@@ -68,6 +80,10 @@ export function createProject(data: {
     id: nextProjectId++,
     name: data.name.trim(),
     description: data.description,
+    projectType: data.projectType,
+    storageType: data.storageType,
+    visibility: data.visibility,
+    color: data.color,
     createdAt: now,
     updatedAt: now,
     lastOpenedAt: now,

@@ -66,8 +66,8 @@ export const projectHandlers = [
     const unauthorized = requireAuth(cookies);
     if (unauthorized) return unauthorizedResponse;
 
-    const { name, description } = (await request.json()) as CreateProjectBody;
-    console.log("Mock: Creating project", { name });
+    const { name, description, projectType, storageType, visibility, color } = (await request.json()) as CreateProjectBody;
+    console.log("Mock: Creating project", { name, projectType, storageType });
 
     if (!name?.trim()) {
       return HttpResponse.json(
@@ -76,7 +76,7 @@ export const projectHandlers = [
       );
     }
 
-    const project = createProject({ name, description });
+    const project = createProject({ name, description, projectType, storageType, visibility, color });
     return HttpResponse.json(project, { status: 201 });
   }),
 
