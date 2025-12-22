@@ -7,12 +7,12 @@ import {
 } from "@tabler/icons-react";
 import type { ProjectType, StorageType, ProjectVisibility } from "../types/project";
 
-export const PROJECT_TYPES: { value: ProjectType; label: string; icon: React.ReactNode }[] = [
-    { value: "mindmap", label: "Mind Map", icon: <IconMap size={18} /> },
-    { value: "canvas", label: "Canvas Board", icon: <IconBrush size={18} /> },
-    { value: "kanban", label: "Kanban", icon: <IconLayoutKanban size={18} /> },
-    { value: "flowchart", label: "Flowchart", icon: <IconSchema size={18} /> },
-    { value: "whiteboard", label: "Whiteboard", icon: <IconChalkboard size={18} /> },
+export const PROJECT_TYPES: { value: ProjectType; label: string; icon: React.ElementType; description: string }[] = [
+    { value: "mindmap", label: "Mind Map", icon: IconMap, description: "Visualize your thoughts and ideas in a branching structure." },
+    { value: "canvas", label: "Canvas Board", icon: IconBrush, description: "A freeform space for brainstorming and arranging elements." },
+    { value: "kanban", label: "Kanban", icon: IconLayoutKanban, description: "Organize tasks and track progress using columns and cards." },
+    { value: "flowchart", label: "Flowchart", icon: IconSchema, description: "Map out processes, workflows, and systems with diagrams." },
+    { value: "whiteboard", label: "Whiteboard", icon: IconChalkboard, description: "A blank canvas for drawing, sketching, and collaborative ideation." },
 ];
 
 export const STORAGE_OPTIONS: { value: StorageType; label: string; description: string }[] = [
