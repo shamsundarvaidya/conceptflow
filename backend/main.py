@@ -2,13 +2,12 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional
 
-from fastapi import Cookie, FastAPI
+from fastapi import Cookie, FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-
 MOCK_TOKEN = "mock-jwt-token-123"
-
 
 class ProjectType(str, Enum):
     mindmap = "mindmap"
@@ -17,21 +16,17 @@ class ProjectType(str, Enum):
     flowchart = "flowchart"
     whiteboard = "whiteboard"
 
-
 class StorageType(str, Enum):
     local = "local"
     cloud = "cloud"
-
 
 class ProjectVisibility(str, Enum):
     private = "private"
     public = "public"
 
-
 class LoginRequest(BaseModel):
     email: str
     password: str
-
 
 class Project(BaseModel):
     id: int
@@ -45,7 +40,6 @@ class Project(BaseModel):
     updatedAt: str
     lastOpenedAt: Optional[str] = None
 
-
 class CreateProjectBody(BaseModel):
     name: str
     description: Optional[str] = None
@@ -53,7 +47,6 @@ class CreateProjectBody(BaseModel):
     storageType: StorageType
     visibility: ProjectVisibility
     color: Optional[str] = None
-
 
 class UpdateProjectBody(BaseModel):
     name: Optional[str] = None
@@ -63,9 +56,15 @@ class UpdateProjectBody(BaseModel):
     visibility: Optional[ProjectVisibility] = None
     color: Optional[str] = None
 
-
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def now_iso() -> str:
     return (
@@ -74,10 +73,8 @@ def now_iso() -> str:
         .replace("+00:00", "Z")
     )
 
-
 def unauthorized_response() -> JSONResponse:
     return JSONResponse({"message": "Unauthorized"}, status_code=401)
-
 
 next_project_id = 3
 projects: List[Project] = [
@@ -107,10 +104,8 @@ projects: List[Project] = [
     ),
 ]
 
-
 def list_projects() -> List[Project]:
     return sorted(projects, key=lambda p: p.updatedAt, reverse=True)
-
 
 def list_recent_projects(limit: int = 5) -> List[Project]:
     return sorted(
@@ -119,13 +114,11 @@ def list_recent_projects(limit: int = 5) -> List[Project]:
         reverse=True,
     )[:limit]
 
-
 def find_project(project_id: int) -> Optional[Project]:
     for project in projects:
         if project.id == project_id:
             return project
     return None
-
 
 def touch_project_last_opened(project_id: int) -> Optional[Project]:
     project = find_project(project_id)
@@ -133,8 +126,7 @@ def touch_project_last_opened(project_id: int) -> Optional[Project]:
         project.lastOpenedAt = now_iso()
     return project
 
-
-def create_project(data: CreateProjectBody) -> Project:
+def create_project_data(data: CreateProjectBody) -> Project:
     global next_project_id
     now = now_iso()
     project = Project(
@@ -153,8 +145,7 @@ def create_project(data: CreateProjectBody) -> Project:
     projects.append(project)
     return project
 
-
-def update_project(project_id: int, data: UpdateProjectBody) -> Optional[Project]:
+def update_project_data(project_id: int, data: UpdateProjectBody) -> Optional[Project]:
     project = find_project(project_id)
     if not project:
         return None
@@ -175,17 +166,14 @@ def update_project(project_id: int, data: UpdateProjectBody) -> Optional[Project
     project.updatedAt = now_iso()
     return project
 
-
-def delete_project(project_id: int) -> bool:
+def delete_project_data(project_id: int) -> bool:
     global projects
     before = len(projects)
     projects = [p for p in projects if p.id != project_id]
     return len(projects) < before
 
-
 def validate_auth(token: Optional[str]) -> bool:
     return token == MOCK_TOKEN
-
 
 @app.post("/api/login")
 def login(payload: LoginRequest, token: Optional[str] = Cookie(default=None)):
@@ -206,7 +194,6 @@ def login(payload: LoginRequest, token: Optional[str] = Cookie(default=None)):
     )
     return response
 
-
 @app.post("/api/logout")
 def logout():
     response = JSONResponse(None, status_code=200)
@@ -221,20 +208,17 @@ def logout():
     )
     return response
 
-
 @app.get("/api/projects")
 def get_projects(token: Optional[str] = Cookie(default=None)):
     if not validate_auth(token):
         return unauthorized_response()
     return JSONResponse([p.model_dump() for p in list_projects()], status_code=200)
 
-
 @app.get("/api/projects/recent")
 def get_recent_projects(token: Optional[str] = Cookie(default=None)):
     if not validate_auth(token):
         return unauthorized_response()
     return JSONResponse([p.model_dump() for p in list_recent_projects()], status_code=200)
-
 
 @app.get("/api/projects/{project_id}")
 def get_project(project_id: int, token: Optional[str] = Cookie(default=None)):
@@ -246,7 +230,6 @@ def get_project(project_id: int, token: Optional[str] = Cookie(default=None)):
         return JSONResponse({"message": "Project not found"}, status_code=404)
     return JSONResponse(project.model_dump(), status_code=200)
 
-
 @app.post("/api/projects")
 def create_project_endpoint(body: CreateProjectBody, token: Optional[str] = Cookie(default=None)):
     if not validate_auth(token):
@@ -255,9 +238,8 @@ def create_project_endpoint(body: CreateProjectBody, token: Optional[str] = Cook
     if not body.name or not body.name.strip():
         return JSONResponse({"message": "Project name is required"}, status_code=400)
 
-    project = create_project(body)
+    project = create_project_data(body)
     return JSONResponse(project.model_dump(), status_code=201)
-
 
 @app.put("/api/projects/{project_id}")
 def update_project_endpoint(
@@ -266,26 +248,23 @@ def update_project_endpoint(
     if not validate_auth(token):
         return unauthorized_response()
 
-    project = update_project(project_id, body)
+    project = update_project_data(project_id, body)
     if not project:
         return JSONResponse({"message": "Project not found"}, status_code=404)
 
     return JSONResponse(project.model_dump(), status_code=200)
-
 
 @app.delete("/api/projects/{project_id}")
 def delete_project_endpoint(project_id: int, token: Optional[str] = Cookie(default=None)):
     if not validate_auth(token):
         return unauthorized_response()
 
-    removed = delete_project(project_id)
+    removed = delete_project_data(project_id)
     if not removed:
         return JSONResponse({"message": "Project not found"}, status_code=404)
 
     return JSONResponse({"message": "Project deleted"}, status_code=200)
 
-
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=False)
