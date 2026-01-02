@@ -59,12 +59,14 @@ const router = createBrowserRouter([
   },
 ]);
 
+/*
 if (import.meta.env.DEV) {
   const { worker } = await import("./mocks/browser");
   await worker.start({
     onUnhandledRequest: "bypass", // Avoid warnings
   });
 }
+*/
 
 
 createRoot(document.getElementById('root')!).render(

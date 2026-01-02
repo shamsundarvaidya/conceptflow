@@ -63,7 +63,8 @@ export default function CreateProjectPage() {
     };
 
     try {
-      const res = await fetch("/api/projects", {
+      const baseUrl = import.meta.env.VITE_API_URL ?? "";
+      const res = await fetch(`${baseUrl}/api/projects`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(projectData),

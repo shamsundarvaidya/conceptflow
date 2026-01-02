@@ -26,22 +26,23 @@ export default function ProjectsPage() {
     // Fetch projects
     useEffect(() => {
         const fetchProjects = async () => {
+            const baseUrl = import.meta.env.VITE_API_URL ?? "";
             try {
                 setLoading(true);
                 // Fetch Recent
-                const recentRes = await fetch("/api/projects/recent");
+                const recentRes = await fetch(`${baseUrl}/api/projects/recent`);
                 if (!recentRes.ok) throw new Error("Failed to fetch recent projects");
                 const recentData = await recentRes.json();
                 setRecentProjects(recentData);
 
                 // Fetch All
-                const allRes = await fetch("/api/projects");
+                const allRes = await fetch(`${baseUrl}/api/projects`);
                 if (!allRes.ok) throw new Error("Failed to fetch project list");
                 const allData = await allRes.json();
                 setAllProjects(allData);
 
             } catch (err) {
-                setError(err instanceof Error ? err.message : "Start mock server!");
+                setError(err instanceof Error ? err.message : "Backend not responding!");
             } finally {
                 setLoading(false);
             }
