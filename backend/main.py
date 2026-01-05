@@ -12,6 +12,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+def root():
+    """Root endpoint - API information"""
+    return {
+        "message": "ConceptFlow API Server",
+        "version": "1.0.0",
+        "status": "running",
+        "docs": "/docs",
+        "redoc": "/redoc"
+    }
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for monitoring"""
+    return {"status": "healthy", "service": "conceptflow-backend"}
+
 app.include_router(auth.router)
 app.include_router(projects.router)
 

@@ -1,5 +1,11 @@
 from datetime import datetime, timezone
 from typing import List, Optional
+import os
+from dotenv import load_dotenv
+from pymongo import MongoClient
+from pymongo.errors import DuplicateKeyError
+from bson import ObjectId
+
 from backend.models import (
     Project,
     ProjectType,
@@ -7,7 +13,26 @@ from backend.models import (
     ProjectVisibility,
     CreateProjectBody,
     UpdateProjectBody,
+    User,
+    UserRegister,
+    UserUpdate,
 )
+
+# Load environment variables
+load_dotenv()
+
+# MongoDB Connection
+MONGODB_URI = os.getenv("MONGODB_URI")
+if not MONGODB_URI:
+    raise ValueError("MONGODB_URI not found in environment variables")
+
+# Initialize MongoDB client
+client = MongoClient(MONGODB_URI)
+db = client.get_database()  # Uses database from URI
+users_collection = db["users"]
+
+# Create unique index on email for users
+users_collection.create_index("email", unique=True)
 
 def now_iso() -> str:
     return (
@@ -15,6 +40,101 @@ def now_iso() -> str:
         .isoformat(timespec="milliseconds")
         .replace("+00:00", "Z")
     )
+
+# ==================== User Database Operations ====================
+
+def create_user(user_data: dict) -> Optional[User]:
+    """Create a new user in the database"""
+    try:
+        now = now_iso()
+        user_doc = {
+            "username": user_data["username"],
+            "email": user_data["email"],
+            "hashed_password": user_data["hashed_password"],
+            "created_at": now,
+            "updated_at": now,
+        }
+        result = users_collection.insert_one(user_doc)
+        user_doc["_id"] = result.inserted_id
+        return User(
+            id=str(user_doc["_id"]),
+            username=user_doc["username"],
+            email=user_doc["email"],
+            hashed_password=user_doc["hashed_password"],
+            created_at=user_doc["created_at"],
+            updated_at=user_doc["updated_at"],
+        )
+    except DuplicateKeyError:
+        return None  # Email already exists
+
+def find_user_by_email(email: str) -> Optional[User]:
+    """Find a user by email"""
+    user_doc = users_collection.find_one({"email": email})
+    if not user_doc:
+        return None
+    return User(
+        id=str(user_doc["_id"]),
+        username=user_doc["username"],
+        email=user_doc["email"],
+        hashed_password=user_doc["hashed_password"],
+        created_at=user_doc["created_at"],
+        updated_at=user_doc["updated_at"],
+    )
+
+def find_user_by_id(user_id: str) -> Optional[User]:
+    """Find a user by ID"""
+    try:
+        user_doc = users_collection.find_one({"_id": ObjectId(user_id)})
+        if not user_doc:
+            return None
+        return User(
+            id=str(user_doc["_id"]),
+            username=user_doc["username"],
+            email=user_doc["email"],
+            hashed_password=user_doc["hashed_password"],
+            created_at=user_doc["created_at"],
+            updated_at=user_doc["updated_at"],
+        )
+    except Exception:
+        return None
+
+def update_user(user_id: str, update_data: dict) -> Optional[User]:
+    """Update user information"""
+    try:
+        update_data["updated_at"] = now_iso()
+        result = users_collection.find_one_and_update(
+            {"_id": ObjectId(user_id)},
+            {"$set": update_data},
+            return_document=True
+        )
+        if not result:
+            return None
+        return User(
+            id=str(result["_id"]),
+            username=result["username"],
+            email=result["email"],
+            hashed_password=result["hashed_password"],
+            created_at=result["created_at"],
+            updated_at=result["updated_at"],
+        )
+    except Exception:
+        return None
+
+def list_all_users() -> List[User]:
+    """List all users (for admin purposes)"""
+    users = []
+    for user_doc in users_collection.find():
+        users.append(User(
+            id=str(user_doc["_id"]),
+            username=user_doc["username"],
+            email=user_doc["email"],
+            hashed_password=user_doc["hashed_password"],
+            created_at=user_doc["created_at"],
+            updated_at=user_doc["updated_at"],
+        ))
+    return users
+
+# ==================== Project Database Operations (In-Memory for now) ====================
 
 next_project_id = 3
 projects: List[Project] = [
