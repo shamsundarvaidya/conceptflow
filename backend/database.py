@@ -7,15 +7,17 @@ from pymongo.errors import DuplicateKeyError
 from bson import ObjectId
 
 from backend.models import (
-    Project,
+    AnyProject,
     ProjectType,
     StorageType,
-    ProjectVisibility,
     CreateProjectBody,
     UpdateProjectBody,
     User,
     UserRegister,
     UserUpdate,
+    MindMapProject,
+    KanbanProject,
+    GenericProject,
 )
 
 # Load environment variables
@@ -30,6 +32,7 @@ if not MONGODB_URI:
 client = MongoClient(MONGODB_URI)
 db = client.get_database()  # Uses database from URI
 users_collection = db["users"]
+projects_collection = db["projects"]
 
 # Create unique index on email for users
 users_collection.create_index("email", unique=True)
@@ -42,7 +45,7 @@ def now_iso() -> str:
     )
 
 # ==================== User Database Operations ====================
-
+# ... (User operations remain the same) ...
 def create_user(user_data: dict) -> Optional[User]:
     """Create a new user in the database"""
     try:
@@ -134,100 +137,103 @@ def list_all_users() -> List[User]:
         ))
     return users
 
-# ==================== Project Database Operations (In-Memory for now) ====================
+# ==================== Project Database Operations (MongoDB) ====================
 
-next_project_id = 3
-projects: List[Project] = [
-    Project(
-        id=1,
-        name="ConceptFlow Demo",
-        description="Example mind-map project",
-        projectType=ProjectType.mindmap,
-        storageType=StorageType.cloud,
-        visibility=ProjectVisibility.private,
-        color="#228be6",
-        createdAt="2025-12-01T09:00:00Z",
-        updatedAt="2025-12-01T10:00:00Z",
-        lastOpenedAt="2025-12-02T07:30:00Z",
-    ),
-    Project(
-        id=2,
-        name="Brainstorm - New Features",
-        description="Rough ideas for next release",
-        projectType=ProjectType.canvas,
-        storageType=StorageType.cloud,
-        visibility=ProjectVisibility.private,
-        color="#40c057",
-        createdAt="2025-12-02T08:00:00Z",
-        updatedAt="2025-12-02T09:15:00Z",
-        lastOpenedAt="2025-12-03T05:45:00Z",
-    ),
-]
+def _doc_to_project(doc: dict) -> AnyProject:
+    """Convert a MongoDB document to a polymorphic Project object"""
+    doc["id"] = str(doc.pop("_id"))
+    p_type = doc.get("projectType")
+    
+    if p_type == ProjectType.mindmap:
+        return MindMapProject(**doc)
+    elif p_type == ProjectType.kanban:
+        return KanbanProject(**doc)
+    else:
+        return GenericProject(**doc)
 
-def list_projects() -> List[Project]:
-    return sorted(projects, key=lambda p: p.updatedAt, reverse=True)
 
-def list_recent_projects(limit: int = 5) -> List[Project]:
-    return sorted(
-        projects,
-        key=lambda p: p.lastOpenedAt or "",
-        reverse=True,
-    )[:limit]
+#list_projects for the given user_id. If user_id is None, raise ValueError
+def list_projects(user_id: str) -> List[AnyProject]:
+    """List projects for a specific user"""
+    if user_id is None:
+        raise ValueError("user_id is required")
+    
+    docs = projects_collection.find({"createdBy": user_id}).sort("updatedAt", -1)
+    return [_doc_to_project(doc) for doc in docs]
 
-def find_project(project_id: int) -> Optional[Project]:
-    for project in projects:
-        if project.id == project_id:
-            return project
-    return None
+def list_recent_projects(user_id: str, limit: int = 5) -> List[AnyProject]:
+    """List recent projects for a user"""
+    docs = projects_collection.find({"createdBy": user_id}).sort("lastOpenedAt", -1).limit(limit)
+    return [_doc_to_project(doc) for doc in docs]
 
-def touch_project_last_opened(project_id: int) -> Optional[Project]:
-    project = find_project(project_id)
-    if project:
-        project.lastOpenedAt = now_iso()
-    return project
-
-def create_project_data(data: CreateProjectBody) -> Project:
-    global next_project_id
-    now = now_iso()
-    project = Project(
-        id=next_project_id,
-        name=data.name.strip(),
-        description=data.description,
-        projectType=data.projectType,
-        storageType=data.storageType,
-        visibility=data.visibility,
-        color=data.color,
-        createdAt=now,
-        updatedAt=now,
-        lastOpenedAt=now,
-    )
-    next_project_id += 1
-    projects.append(project)
-    return project
-
-def update_project_data(project_id: int, data: UpdateProjectBody) -> Optional[Project]:
-    project = find_project(project_id)
-    if not project:
+def find_project(project_id: str) -> Optional[AnyProject]:
+    """Find a project by ID"""
+    try:
+        doc = projects_collection.find_one({"_id": ObjectId(project_id)})
+        if not doc:
+            return None
+        return _doc_to_project(doc)
+    except Exception:
         return None
 
-    if data.name is not None:
-        project.name = data.name.strip()
-    if data.description is not None:
-        project.description = data.description
-    if data.projectType is not None:
-        project.projectType = data.projectType
-    if data.storageType is not None:
-        project.storageType = data.storageType
-    if data.visibility is not None:
-        project.visibility = data.visibility
-    if data.color is not None:
-        project.color = data.color
+def touch_project_last_opened(project_id: str) -> Optional[AnyProject]:
+    """Update the lastOpenedAt timestamp"""
+    try:
+        now = now_iso()
+        result = projects_collection.find_one_and_update(
+            {"_id": ObjectId(project_id)},
+            {"$set": {"lastOpenedAt": now}},
+            return_document=True
+        )
+        if not result:
+            return None
+        return _doc_to_project(result)
+    except Exception:
+        return None
 
-    project.updatedAt = now_iso()
-    return project
+def create_project_data(data: CreateProjectBody, user_id: str) -> AnyProject:
+    """Create a new project in MongoDB"""
+    now = now_iso()
+    project_doc = data.model_dump()
+    project_doc.update({
+        "createdBy": user_id,
+        "createdAt": now,
+        "updatedAt": now,
+        "lastOpenedAt": now,
+    })
+    
+    # Initialize type-specific fields if not present
+    if data.projectType == ProjectType.mindmap:
+        project_doc.setdefault("nodes", [])
+        project_doc.setdefault("edges", [])
+    elif data.projectType == ProjectType.kanban:
+        project_doc.setdefault("columns", [])
 
-def delete_project_data(project_id: int) -> bool:
-    global projects
-    before = len(projects)
-    projects = [p for p in projects if p.id != project_id]
-    return len(projects) < before
+    result = projects_collection.insert_one(project_doc)
+    project_doc["_id"] = result.inserted_id
+    return _doc_to_project(project_doc)
+
+def update_project_data(project_id: str, data: UpdateProjectBody) -> Optional[AnyProject]:
+    """Update project metadata or content in MongoDB"""
+    try:
+        update_doc = {k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None}
+        update_doc["updatedAt"] = now_iso()
+        
+        result = projects_collection.find_one_and_update(
+            {"_id": ObjectId(project_id)},
+            {"$set": update_doc},
+            return_document=True
+        )
+        if not result:
+            return None
+        return _doc_to_project(result)
+    except Exception:
+        return None
+
+def delete_project_data(project_id: str) -> bool:
+    """Delete a project from MongoDB"""
+    try:
+        result = projects_collection.delete_one({"_id": ObjectId(project_id)})
+        return result.deleted_count > 0
+    except Exception:
+        return False
